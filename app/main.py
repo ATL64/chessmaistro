@@ -38,8 +38,6 @@ dash_app = dash.Dash(__name__, server = app, url_base_pathname='/') #, external_
 image_filename_1 = 'chess-logo-2.png' # replace with your own image
 encoded_image_1 = base64.b64encode(open(image_filename_1, 'rb').read())
 
-#image_filename_2 = 'reconciliator-logo.png' # replace with your own image
-#encoded_image_2 = base64.b64encode(open(image_filename_2, 'rb').read())
 
 # Serve local css
 dash_app.css.config.serve_locally = True
@@ -158,44 +156,15 @@ dash_app.layout = html.Div([
 
     ###### HIDDEN DIV TO SHARE GLOBAL DATAFRAME
     html.Div(id='hidden-dff', style={'display': 'none'}),
-
+    html.Div(id='filtered-dff', style={'display': 'none'}),
     ###### TOP TITLE ######
 
     html.Div([
               html.Div([html.Img(src='data:image/png;base64,{}'.format(encoded_image_1.decode()))],
-                       style={'display': 'inline-block', 'height': '200px', 'align-items': 'center', 'justify-content': 'center',
-                                'display': 'flex'}, id='logo'),
-
+                       style={'display': 'inline-block', 'height': '200px', 'align-items': 'center',
+                              'justify-content': 'center', 'display': 'flex'}, id='logo'),
             ]),
     html.Br(),
-    html.Div([
-        html.Div([html.H3('Colour:', style={'font-family': 'Courier New, monospace'})],
-                 style={'display': 'inline-block', 'width': '300px', 'marginLeft': 40}),
-        html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
-                 style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                        'font-family': 'Courier New, monospace'})
-    ]),
-    html.Div([
-        dcc.Dropdown(id='color-dropdown',
-                     options=[
-                         {'label': 'Black', 'value': 'black'},
-                         {'label': 'White', 'value': 'white'}
-                     ],
-                     value=['black', 'white'],
-                     multi=True,
-                     style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                            'backgroundColor': '#222222'}),
-        dcc.Dropdown(id='month-dropdown',
-                     options=[
-                         {'label': '2019_02', 'value': '2019_02'},
-                         {'label': '2019_03', 'value': '2019_03'},
-                     ],
-                     value=['2019_07', '2019_08'],
-                     multi=True,
-                     style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                            'backgroundColor': '#222222'}
-                     )
-    ], id="wrapper"),
 
     ###### TABS  ######
     html.Br(),
@@ -210,6 +179,34 @@ dash_app.layout = html.Div([
             html.Br(),
             html.Br(),
             html.Br(),
+            html.Div([
+                html.Div([html.H3('Colour:', style={'font-family': 'Courier New, monospace'})],
+                         style={'display': 'inline-block', 'width': '300px', 'marginLeft': 40}),
+                html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
+                         style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                                'font-family': 'Courier New, monospace'})
+            ]),
+            html.Div([
+                dcc.Dropdown(id='color-dropdown',
+                             options=[
+                                 {'label': 'Black', 'value': 'black'},
+                                 {'label': 'White', 'value': 'white'}
+                             ],
+                             value=['black', 'white'],
+                             multi=True,
+                             style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                                    'backgroundColor': '#222222'}),
+                dcc.Dropdown(id='month-dropdown',
+                             options=[
+                                 {'label': '2019_02', 'value': '2019_02'},
+                                 {'label': '2019_03', 'value': '2019_03'},
+                             ],
+                             value=['2019_07', '2019_08'],
+                             multi=True,
+                             style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                                    'backgroundColor': '#222222'}
+                             )
+            ], id="wrapper"),
             html.Br(),
             html.Br(),
 
@@ -235,9 +232,6 @@ dash_app.layout = html.Div([
             dcc.Graph(id='hourly-chart', style={'display': 'inline-block', 'marginLeft': 10}),
             dcc.Graph(id='daily-elo-chart', style={'display': 'inline-block', 'marginLeft': 10}),
                 html.Br(),
-                html.Br(),
-                html.H5('Rules to be removed from database:', style={'font-family': 'Courier New, monospace'}),
-
 
                  html.Br()], style=tab_style, selected_style=tab_selected_style),
 
@@ -307,42 +301,7 @@ html.H1('', style={'display': 'inline-block', 'marginLeft': 60,'marginBottom': 5
         ])], style=tab_style,
             selected_style=tab_selected_style)
     ], style=tabs_styles),
-        ###### PROVIDER AND MONTH DROPDOWNS ######
 
-        html.Br(),
-        html.Br(),
-        html.H5(
-        'aaaasdölkjsdafölkjasdfölkj'
-        'Somthing something'
-        , style={'font-family': 'Courier New, monospace'}),
-
-        html.Br(),
-        html.Br(),
-        html.H5(
-        'asdfasdfasdfasdf'
-        'asadfasdfaasdfasdf'
-        , style={'font-family': 'Courier New, monospace'}),
-
-        html.Br(),
-        html.Br(),
-        html.H5(
-        'asdfasdfasdfasdf '
-        'asdfasdfasdfasdfasdfsdf'
-        , style={'font-family': 'Courier New, monospace'}),
-
-        ###### JIRA EURO AMOUNTS CHART ######
-
-
-        #
-        # ###### JIRA EURO AMOUNTS CHART ######
-        #
-        # dcc.Graph(id='jira-tickets-amount', style={'display': 'inline-block', 'marginLeft': 20}),
-        html.Br(),
-        html.Br(),
-        html.Br(),
-        html.Br(),
-        html.Br(),
-        html.Br(),
         html.Br(),
         html.Br()
 ])
@@ -421,21 +380,29 @@ def user_games(logo):
     del df['result_black']
     del df['username_black']
     del df['username_white']
-    print(df.columns)
+    #print(df.columns)
     return df.to_json(orient='split')
 
-@dash_app.callback([Output("table_df", "data"), Output('table_df', 'columns')], [Input('hidden-dff', 'children')])
+
+@dash_app.callback(Output('filtered-dff', 'children'), [Input('hidden-dff', 'children'), Input('color-dropdown', 'value')])
+def update_table(original_df, colors):
+    dff = pd.read_json(original_df, orient='split')
+    dff = dff[dff['user_color'].isin(colors)]
+    print(dff.head())
+    return dff.to_json(orient='split')
+
+
+@dash_app.callback([Output("table_df", "data"), Output('table_df', 'columns')], [Input('filtered-dff', 'children')])
 def update_table(jsonified_cleaned_data):
     dff = pd.read_json(jsonified_cleaned_data, orient='split')
-
     return dff.values, columns
 
 
 @dash_app.callback(
     Output('hourly-chart', 'figure'),
-    [Input('hidden-dff', 'children')])
-def display_output(hidden_dff):
-    dff = pd.read_json(hidden_dff, orient='split')
+    [Input('filtered-dff', 'children')])
+def display_output(filtered_dff):
+    dff = pd.read_json(filtered_dff, orient='split')
     def win_games(x):
         return (x == 'win').sum()
 
@@ -488,9 +455,9 @@ def display_output(hidden_dff):
 
 @dash_app.callback(
     Output('pie-chart', 'figure'),
-    [Input('hidden-dff', 'children')])
-def display_output(hidden_dff):
-    dff = pd.read_json(hidden_dff, orient='split')
+    [Input('filtered-dff', 'children')])
+def display_output(filtered_dff):
+    dff = pd.read_json(filtered_dff, orient='split')
     def is_win(val):
         if val in ('win', 'threecheck', 'kingofthehill'):
             return 'win'
@@ -521,9 +488,9 @@ def display_output(hidden_dff):
 
 @dash_app.callback(
     Output('daily-elo-chart', 'figure'),
-    [Input('hidden-dff', 'children')])
-def display_output(hidden_dff):
-    dff = pd.read_json(hidden_dff, orient='split')
+    [Input('filtered-dff', 'children')])
+def display_output(filtered_dff):
+    dff = pd.read_json(filtered_dff, orient='split')
     dff['date'] = dff['end_time'].apply(lambda x: x.date())
     daily_elo = dff.groupby(['date'])['user_rating'].agg(max).reset_index()
 
