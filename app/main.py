@@ -233,6 +233,7 @@ dash_app.layout = html.Div([
                         ]),
             html.Br(),
             dcc.Graph(id='hourly-chart', style={'display': 'inline-block', 'marginLeft': 10}),
+            dcc.Graph(id='daily-elo-chart', style={'display': 'inline-block', 'marginLeft': 10}),
                 html.Br(),
                 html.Br(),
                 html.H5('Rules to be removed from database:', style={'font-family': 'Courier New, monospace'}),
@@ -514,6 +515,29 @@ def display_output(hidden_dff):
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         title='Overall game results',
+        font={'color': '#ffffff'},
+    )
+    return {'data': data, 'layout': layout}
+
+@dash_app.callback(
+    Output('daily-elo-chart', 'figure'),
+    [Input('hidden-dff', 'children')])
+def display_output(hidden_dff):
+    dff = pd.read_json(hidden_dff, orient='split')
+    dff['date'] = dff['end_time'].apply(lambda x: x.date())
+    daily_elo = dff.groupby(['date'])['user_rating'].agg(max).reset_index()
+
+    trace1 = go.Scatter(
+        x=daily_elo.date,
+        y=daily_elo.user_rating,
+        connectgaps=True
+    )
+    data = [trace1]
+    layout = go.Layout(
+        hovermode='closest',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        title='Daily max ELO achieved',
         font={'color': '#ffffff'},
     )
     return {'data': data, 'layout': layout}
