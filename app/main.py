@@ -134,7 +134,7 @@ def build_quick_stats_panel():
             html.Div(
                 id="card-2",
                 children=[
-                    html.P("Current ELO:"),
+                    html.P("Latest ELO:"),
                     daq.LEDDisplay(
                         id="led-elo",
                         value="1400",
@@ -157,19 +157,16 @@ dash_app.layout = html.Div([
     ###### HIDDEN DIV TO SHARE GLOBAL DATAFRAME
     html.Div(id='hidden-dff', style={'display': 'none'}),
     html.Div(id='filtered-dff', style={'display': 'none'}),
+    html.Div(id='games_played', style={'display': 'none'}),
     ###### TOP TITLE ######
-
-    html.Div([
-              html.Div([html.Img(src='data:image/png;base64,{}'.format(encoded_image_1.decode()))],
-                       style={'display': 'inline-block', 'height': '200px', 'align-items': 'center',
+    html.Br(),
+    html.Br(),
+    html.Div([html.Img(src='data:image/png;base64,{}'.format(encoded_image_1.decode()))],
+                       style={'display': 'inline-block', 'height': '180px', 'align-items': 'center',
                               'justify-content': 'center', 'display': 'flex'}, id='logo'),
-            ]),
     html.Br(),
-
+    html.Br(),
     ###### TABS  ######
-    html.Br(),
-    html.Br(),
-    html.Br(),
     html.Br(),
     dcc.Tabs(id="tabs", children=[
 
@@ -179,14 +176,14 @@ dash_app.layout = html.Div([
             html.Br(),
             html.Br(),
             html.Br(),
-            html.Div([
-                html.Div([html.H3('Colour:', style={'font-family': 'Courier New, monospace'})],
-                         style={'display': 'inline-block', 'width': '300px', 'marginLeft': 40}),
-                html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
-                         style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                                'font-family': 'Courier New, monospace'})
-            ]),
-            html.Div([
+             html.Div([
+                 html.Div([html.H3('Colour:', style={'font-family': 'Courier New, monospace'})],
+                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 40}),
+                 html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
+                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                                 'font-family': 'Courier New, monospace'})
+                      ]),
+             html.Div([
                 dcc.Dropdown(id='color-dropdown',
                              options=[
                                  {'label': 'Black', 'value': 'black'},
@@ -196,21 +193,29 @@ dash_app.layout = html.Div([
                              multi=True,
                              style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
                                     'backgroundColor': '#222222'}),
-                dcc.Dropdown(id='month-dropdown',
-                             options=[
-                                 {'label': '2019_02', 'value': '2019_02'},
-                                 {'label': '2019_03', 'value': '2019_03'},
-                             ],
-                             value=['2019_07', '2019_08'],
-                             multi=True,
-                             style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                                    'backgroundColor': '#222222'}
-                             )
-            ], id="wrapper"),
+                html.Div([
+                    dcc.DatePickerRange(
+                        id='month-range',
+                        min_date_allowed=dt(1995, 8, 5),
+                        max_date_allowed=dt(2017, 9, 19),
+                        initial_visible_month=dt(2017, 8, 5),
+                        end_date=dt(2017, 8, 25).date(),
+                        style={'backgroundColor': '#222222'}
+                    ),
+                    # dcc.RangeSlider(id='month-range',
+                    #                       updatemode = 'mouseup',
+                    #                       #don't let it update till mouse released
+                    #                       min=1, max=2, value=[1, 2])
+                        ],
+                          style = {'display': 'inline-block', 'width': '500px', 'marginLeft': 40,
+                                   'backgroundColor': '#222222'})
+                                     ], id='wrapper2'),
+
+
             html.Br(),
             html.Br(),
 
-            ###### BUTTONS FOR UPDATE ######
+            ######  HOURLY AND DAILY CHARTS ######
 
             # html.H5(
             #     'asdfasdfasdfa'
@@ -224,16 +229,22 @@ dash_app.layout = html.Div([
                             className='col s12 m6'
                             ),
                          html.Div(
-                             dcc.Graph(id='pie-chart' #,style={'marginRight': 10}
-                                 ),
-                                        className='col s12 m6')
+                             dcc.Graph(id='pie-chart'),
+                             className='col s12 m6')
                         ]),
             html.Br(),
-            dcc.Graph(id='hourly-chart', style={'display': 'inline-block', 'marginLeft': 10}),
-            dcc.Graph(id='daily-elo-chart', style={'display': 'inline-block', 'marginLeft': 10}),
+            html.Div(className='row', style={'display': 'flex', 'justify-content': 'space-between'},
+                     children=[
+                         html.Div(dcc.Graph(id='hourly-chart'),
+                                  className='col s12 m6'),
+                         html.Div(dcc.Graph(id='daily-elo-chart'),
+                                  className='col s12 m6'),
+                                ]
+                     ),
                 html.Br(),
-
-                 html.Br()], style=tab_style, selected_style=tab_selected_style),
+                html.Br(),
+                    ],style=tab_style,
+                selected_style=tab_selected_style),
 
 
         ###### SECOND TAB: Custom SQL  ######
@@ -284,29 +295,24 @@ dash_app.layout = html.Div([
                                                ], style=tab_style,
             selected_style=tab_selected_style),
         # The  &nbsp; are to make empty lines
-    dcc.Tab(label='About this site', children=[html.Div([
-            dcc.Markdown('''
-            Created and maintained by CrowdLee Associates.
-          
-            
-            &nbsp;  
-            &nbsp;
-            &nbsp;  
-            &nbsp;      
-            
-            
-            '''),
-html.H1('', style={'display': 'inline-block', 'marginLeft': 60,'marginBottom': 500, 'marginTop': 50})
-
-        ])], style=tab_style,
-            selected_style=tab_selected_style)
-    ], style=tabs_styles),
-
-        html.Br(),
-        html.Br()
-])
-
-
+    dcc.Tab(label='About this site',
+            children=[html.Div([
+                dcc.Markdown('''
+                                Created and maintained by CrowdLee Associates.
+                              
+                                
+                                &nbsp;  
+                                &nbsp;
+                                &nbsp;  
+                                &nbsp;      
+                                
+                                
+                                ''')
+                                ]
+                                )
+                        ], style=tab_style)
+        ], style=tabs_styles)
+    ])
 
 
 
@@ -397,6 +403,34 @@ def update_table(jsonified_cleaned_data):
     dff = pd.read_json(jsonified_cleaned_data, orient='split')
     return dff.values, columns
 
+
+
+
+@dash_app.callback(Output('led-games-played', 'value'), [Input('filtered-dff', 'children')])
+def update_style(filtered_df):
+    dff = pd.read_json(filtered_df, orient='split')
+    games_played = dff['end_time'].count()
+    return games_played
+
+@dash_app.callback(Output('led-elo', 'value'), [Input('filtered-dff', 'children')])
+def update_style(filtered_df):
+    dff = pd.read_json(filtered_df, orient='split')
+    elo = dff[dff['end_time'] == max(dff['end_time'])]['user_rating'].values[0]
+    return elo
+
+
+# @dash_app.callback([Output('month-range', 'min'), Output('month-range', 'max'), Output('month-range', 'value')],
+#                    [Input('hidden-dff', 'children')])
+# def date_min_max(hidden_df):
+#     hidden_dff = pd.read_json(hidden_df, orient='split')
+#     min_date=min(hidden_dff['end_time']).date()
+#     max_date=max(hidden_dff['end_time']).date()
+#     return min_date, max_date, [min_date, max_date]
+#
+
+####################
+# CHARTS CALLBACKS #
+####################
 
 @dash_app.callback(
     Output('hourly-chart', 'figure'),
