@@ -178,12 +178,13 @@ dash_app.layout = html.Div([
             html.Br(),
              html.Div([
                  html.Div([html.H3('Colour:', style={'font-family': 'Courier New, monospace'})],
-                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 40}),
+                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 30}),
                  html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
-                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 80,
                                  'font-family': 'Courier New, monospace'})
                       ]),
-             html.Div([
+            html.Div(className='row', style={'display': 'flex'},
+                     children=[
                 dcc.Dropdown(id='color-dropdown',
                              options=[
                                  {'label': 'Black', 'value': 'black'},
@@ -191,25 +192,20 @@ dash_app.layout = html.Div([
                              ],
                              value=['black', 'white'],
                              multi=True,
-                             style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
-                                    'backgroundColor': '#222222'}),
+                             style={'width': '300px', 'height': '40px', 'marginLeft': 20, 'backgroundColor': '#222222'}
+                             ),
                 html.Div([
-                    dcc.DatePickerRange(
-                        id='month-range',
-                        min_date_allowed=dt(1995, 8, 5),
-                        max_date_allowed=dt(2017, 9, 19),
-                        initial_visible_month=dt(2017, 8, 5),
-                        end_date=dt(2017, 8, 25).date(),
-                        style={'backgroundColor': '#222222'}
-                    ),
-                    # dcc.RangeSlider(id='month-range',
-                    #                       updatemode = 'mouseup',
-                    #                       #don't let it update till mouse released
-                    #                       min=1, max=2, value=[1, 2])
-                        ],
-                          style = {'display': 'inline-block', 'width': '500px', 'marginLeft': 40,
-                                   'backgroundColor': '#222222'})
-                                     ], id='wrapper2'),
+                    html.Div(
+                                dcc.DatePickerRange(
+                                id='month-range',
+                                min_date_allowed=dt(1995, 8, 5),
+                                max_date_allowed=dt(2017, 9, 19),
+                                initial_visible_month=dt(2017, 8, 5),
+                                end_date=dt(2017, 8, 25).date(),
+                                ), style={'marginLeft': 100}
+                            ),
+                        ])
+                        ], id='wrapper'),
 
 
             html.Br(),

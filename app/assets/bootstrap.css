@@ -6926,7 +6926,7 @@ a.list-group-item-danger.active:focus {
 .panel-default > .panel-heading {
   background-color: #464545;
 }
-#wrapper .Select--multi .Select-value {
+#wrapper Select--multi Select-value {
   background-color: #222222;
 }
 
@@ -6938,3 +6938,30 @@ a.list-group-item-danger.active:focus {
   background-color: #222222;
 }
 
+.DateInput_input, .DateInput_input_1 {
+  background-color: #222222;
+  color: #ffffff;
+  border-bottom: 1px solid #c0c0c0;
+  height: 39px;
+  border-bottom-radius: 3px;
+  border-top: 0px
+}
+
+.DateRangePickerInput {
+  background-color: #222222;
+  color: #ffffff;
+  border-bottom: 1px solid #c0c0c0;
+  height: 40px;
+}
+
+.DateRangePickerInput__withBorder {
+ color: #ffffff
+}
+
+.DateRangePicker, .DateRangePicker_1 {
+  background-color: #222222;
+  color: #ffffff;
+  border: 1px solid #c0c0c0;
+  height: 40px;
+  border-radius: 6px;
+}
