@@ -6928,6 +6928,7 @@ a.list-group-item-danger.active:focus {
 }
 #wrapper Select--multi Select-value {
   background-color: #222222;
+  color: #c0c0c0;
 }
 
 #wrapper .VirtualizedSelectFocusedOption {
@@ -6964,4 +6965,23 @@ a.list-group-item-danger.active:focus {
   border: 1px solid #c0c0c0;
   height: 40px;
   border-radius: 6px;
+}
+
+.Select-menu-outer {
+  background-color: #222222;
+  color: #c0c0c0
+}
+
+.Select-control {
+  background-color: #222222 !important;
+  color: #ffffff !important;
+}
+
+.Select-value-label {
+  color: #ffffff !important;
+}
+
+.Select-multi-value-wrapper {
+  background-color: #222222 !important;
+  color: #ffffff !important;
 }

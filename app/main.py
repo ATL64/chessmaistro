@@ -16,7 +16,8 @@ import time
 import math
 import urllib
 import urllib.request
-from datetime import datetime
+from datetime import timedelta
+import contextlib
 import os
 import urllib
 import urllib.request
@@ -92,23 +93,22 @@ tab_selected_style = {
                         ###############################
 
 
-username = "categoriaopuesta" #change
-baseUrl = "https://api.chess.com/pub/player/" + username + "/games/"
-stats_url = "https://api.chess.com/pub/player/" + username + "/stats"
-archivesUrl = baseUrl + "archives"
 
 columns = [
     {"id": 0, "name": "time_control"},
     {"id": 1, "name": "end_time"},
     {"id": 2, "name": "rated"},
     {"id": 3, "name": "time_class"},
-    {"id": 4, "name": "hour"},
-    {"id": 5, "name": "user_result"},
-    {"id": 6, "name": "user_color"},
-    {"id": 7, "name": "user_rating"},
-    {"id": 8, "name": "opponent_rating"},
-    {"id": 9, "name": "username_opponent"}
+    {"id": 4, "name": "rules"},
+    {"id": 5, "name": "hour"},
+    {"id": 6, "name": "user_result"},
+    {"id": 7, "name": "user_color"},
+    {"id": 8, "name": "user_rating"},
+    {"id": 9, "name": "opponent_rating"},
+    {"id": 10, "name": "username_opponent"}
     ]
+
+st_date = (dt.today().date() - timedelta(days=600))
 
 def build_quick_stats_panel():
     return html.Div(
@@ -148,6 +148,15 @@ def build_quick_stats_panel():
     )
 
 
+# Make list of months to get data from api
+now = dt(dt.now().year, dt.now().month, 1)
+ctr = dt(2020, 1, 1)
+list_months = [ctr.strftime('%Y-%m-%d')]
+
+while ctr < now:
+    ctr += timedelta(days=32)
+    ctr = ctr.replace(day=1)
+    list_months.append(dt(ctr.year, ctr.month, 1).strftime('%Y-%m-%d') )
 
 #####################
 ###### LAYOUT #######
@@ -158,6 +167,9 @@ dash_app.layout = html.Div([
     html.Div(id='hidden-dff', style={'display': 'none'}),
     html.Div(id='filtered-dff', style={'display': 'none'}),
     html.Div(id='games_played', style={'display': 'none'}),
+    html.Div(id='intermediate-dff', style={'display': 'none'}),
+
+
     ###### TOP TITLE ######
     html.Br(),
     html.Br(),
@@ -170,8 +182,65 @@ dash_app.layout = html.Div([
     html.Br(),
     dcc.Tabs(id="tabs", children=[
 
-        ###### FIRST TAB: ERROR STRING  ######
+        ###### FIRST TAB: INPUT USER ######
 
+        dcc.Tab(label='Overview Stats', children=[
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.H5(
+                'Input your chess.com username: Hold on 10-20 seconds for data to be fetched'
+                , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+            html.Div(dcc.Input(id="username", type="text", placeholder="",
+                               style={'marginLeft': 40, 'backgroundColor': '#222222', 'color': '#ffffff',
+                                      'height': '40px', 'border': '1px solid #c0c0c0', 'borderRadius': '3px',})),
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.H5(
+                'Choose your timezone:'
+                , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+            dcc.Dropdown(id='timezone-dropdown',
+                         options=[
+                             {'label': 'Europe/Dublin', 'value': 'Europe/Dublin'},
+                             {'label': 'Europe/Berlin', 'value': 'Europe/Berlin'},
+                             {'label': 'Europe/Athens', 'value': 'Europe/Athens'},
+                             {'label': 'Asia/Istanbul', 'value': 'Asia/Istanbul'},
+                             {'label': 'Asia/Dubai', 'value': 'Asia/Dubai'},
+                             {'label': 'Asia/Bangkok', 'value': 'Asia/Bangkok'},
+                             {'label': 'Asia/Hong_Kong', 'value': 'Asia/Hong_Kong'},
+                             {'label': 'Asia/Tokyo', 'value': 'Asia/Tokyo'},
+                             {'label': 'Australia/Brisbane', 'value': 'Australia/Brisbane'},
+                             {'label': 'Australia/Melbourne', 'value': 'Australia/Melbourne'},
+                             {'label': 'Pacific/Fiji', 'value': 'Pacific/Fiji'},
+                             {'label': 'America/Buenos_Aires', 'value': 'America/Montevideo'},
+                             {'label': 'America/Toronto', 'value': 'America/Toronto'},
+                             {'label': 'America/La_Paz', 'value': 'America/La_Paz'},
+                             {'label': 'America/Mexico_City', 'value': 'America/Mexico_City'},
+                             {'label': 'America/Phoenix', 'value': 'America/Phoenix'},
+                             {'label': 'America/Tijuana', 'value': 'America/Tijuana'},
+                             {'label': 'America/Vancouver', 'value': 'America/Vancouver'}
+                         ],
+                         value='America/Montevideo',
+                         style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
+                                'backgroundColor': '#222222'}, ),
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.Br(),
+            html.H5(
+                'Press the button to fetch your data. It can take up to 30-60 seconds to load the data'
+                , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+             dbc.Button('Fetch data!', id='fetch-data-button', n_clicks=0, className="btn btn-warning",
+                        style={'display': 'inline-block', 'marginLeft': 40}),
+            dcc.Loading(id="loading-1", children=[html.Div(id="loading-output-1")], type="default",
+                        style={'display': 'inline-block', 'marginLeft': 60}),
+            html.H5(
+                'Once it has finished loading, you can go to the other tabs to see your stats'
+                , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+            ],style=tab_style,
+                selected_style=tab_selected_style),
         dcc.Tab(label='Overview Stats', children=[
             html.Br(),
             html.Br(),
@@ -181,6 +250,9 @@ dash_app.layout = html.Div([
                           style={'display': 'inline-block', 'width': '300px', 'marginLeft': 30}),
                  html.Div([html.H3('Dates:', style={'font-family': 'Courier New, monospace'})],
                           style={'display': 'inline-block', 'width': '300px', 'marginLeft': 80,
+                                 'font-family': 'Courier New, monospace'}),
+                 html.Div([html.H3('Time Class:', style={'font-family': 'Courier New, monospace'})],
+                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
                                  'font-family': 'Courier New, monospace'})
                       ]),
             html.Div(className='row', style={'display': 'flex'},
@@ -197,25 +269,32 @@ dash_app.layout = html.Div([
                 html.Div([
                     html.Div(
                                 dcc.DatePickerRange(
-                                id='month-range',
-                                min_date_allowed=dt(1995, 8, 5),
-                                max_date_allowed=dt(2017, 9, 19),
-                                initial_visible_month=dt(2017, 8, 5),
-                                end_date=dt(2017, 8, 25).date(),
+                                    id='month-range',
+                                    min_date_allowed=dt(2017, 1, 1).date(),
+                                    max_date_allowed=dt.today().date(),
+                                    initial_visible_month= (dt.today().date()),
+                                    start_date=st_date,
+                                    end_date=dt.today().date(),
                                 ), style={'marginLeft': 100}
                             ),
-                        ])
+                        ]),
+                 dcc.Dropdown(id='time-class-dropdown',
+                              options=[
+                                  {'label': 'Blitz', 'value': 'blitz'},
+                                  {'label': 'Bullet', 'value': 'bullet'},
+                                  {'label': 'Rapid', 'value': 'rapid'}
+                              ],
+                              value=['blitz','bullet'],
+                              multi=True,
+                              style={'width': '300px', 'height': '40px', 'marginLeft': 20,
+                                     'backgroundColor': '#222222'}
+                              ),
                         ], id='wrapper'),
-
-
             html.Br(),
             html.Br(),
 
             ######  HOURLY AND DAILY CHARTS ######
 
-            # html.H5(
-            #     'asdfasdfasdfa'
-            #     , style={'font-family': 'Courier New, monospace'}),
             html.Div(className='row', style = {'display' : 'flex', 'justify-content': 'space-between'},
                      children=[
                         html.Div(
@@ -245,7 +324,7 @@ dash_app.layout = html.Div([
 
         ###### SECOND TAB: Custom SQL  ######
 
-        dcc.Tab(label='All results table', children=[
+        dcc.Tab(label='Results table', children=[
             html.Br(),
             html.Br(),
             html.Br(),
@@ -266,24 +345,8 @@ dash_app.layout = html.Div([
             ),
             html.Br(),
             html.Br(),
-            html.H5(
-                'You can add a new rule with custom SQL in the table below.'
-                , style={'font-family': 'Courier New, monospace'}),
-            html.Br(),
 
-            ###### BUTTONS FOR UPDATE ######
 
-            html.Div([
-                html.Br(),
-            ]),
-            html.Br(),
-            html.Br(),
-            html.H5('Rules to be removed from database:', style={'font-family': 'Courier New, monospace'}),
-
-            html.Br(),
-            html.H5('Rules to be added to database:', style={'font-family': 'Courier New, monospace'}),
-            html.Br(),
-            html.Br(),
             html.Br()], style=tab_style, selected_style=tab_selected_style),
 
     dcc.Tab(label='Your News', children=[html.Div([html.H1('Personalized news articles', style={'display': 'inline-block', 'marginLeft': 60,'marginBottom': 500, 'marginTop': 500}),
@@ -306,7 +369,8 @@ dash_app.layout = html.Div([
                                 ''')
                                 ]
                                 )
-                        ], style=tab_style)
+                        ],style=tab_style,
+                selected_style=tab_selected_style)
         ], style=tabs_styles)
     ])
 
@@ -322,59 +386,112 @@ dash_app.layout = html.Div([
 ###############################
 
 
-@dash_app.callback(Output('hidden-dff', 'children'), [Input('logo','children')])
-def user_games(logo):
+@dash_app.callback([Output('hidden-dff', 'children'), Output("loading-output-1", "children")],
+                   [Input('fetch-data-button', 'n_clicks')],
+                   [State('username', 'value'), State('timezone-dropdown', 'value')])
+def user_games(n_clicks, username_input, timezone_input):
+    print(username_input)
+    print('that was username_input')
+    print(not username_input)
+    if not username_input:
+        username = 'categoriaopuesta'
+    else:
+        username = username_input
+    if not timezone_input:
+        timezone = ['Asia/Bangkok']
+    else:
+        timezone = [timezone_input]
+    print(timezone)
     # updates both the hidden dff and the global dff
-    username = "categoriaopuesta"  # change
+    print('starting hidden-dff')
     baseUrl = "https://api.chess.com/pub/player/" + username + "/games/"
     stats_url = "https://api.chess.com/pub/player/" + username + "/stats"
     archivesUrl = baseUrl + "archives"
 
-    current_year = dt.today().strftime('%Y')
-    current_month = '03'  # datetime.today().strftime('%m')
-    url = baseUrl + current_year + "/" + current_month
-    # filename_month = username + current_year + current_month
+    all_df = None
 
-    url_request = Request(url)
-    data = urlopen(url_request)
+    if not username_input:
+        months_final = ['2020-01-01']
+    else:
+        months_final = list_months
 
-    df = pd.read_json(data)
+    for date in months_final:
+        print(date)
+        current_year = date[0:4]  # '1998' #dt.today().strftime('%Y')
+        current_month = date[5:7]  # '03'  # datetime.today().strftime('%m')
+        url = baseUrl + current_year + "/" + current_month
+        # filename_month = username + current_year + current_month
 
-    print(".pgn has been downloaded.")
+        tries = 3
+        for i in range(tries):
+            try:
+                print('make url_request var')
+                url_request = Request(url)
+                print('get api data')
+                #data = urlopen(url_request)
+                with contextlib.closing(urlopen(url_request)) as data:
+                    print('read into df')
+                    df = pd.read_json(data)
+                print('succesfully read into df')
 
-    df1 = df["games"].apply(pd.Series)
-    df2 = pd.concat([df1.drop(['white'], axis=1), df1['white'].apply(pd.Series)], axis=1)
-    df = pd.concat([df2.drop(['black'], axis=1), df2['black'].apply(pd.Series)], axis=1)
+            except:
+                if i < tries - 1:  # i is zero indexed
+                    print('api call failed, retrying')
+                    print(i)
+                    time.sleep(3)
+                    continue
+                else:
+                    raise
+            break
+        if len(df) > 0:
+            # urllib.request.urlretrieve(url, os.getcwd() + r"/" + filename_month + ".pgn")  # change
+            print(".pgn has been downloaded.")
+            # df = pd.read_json(os.getcwd() + r"/" + filename_month + ".pgn")
+            print(df.columns)
+            print(len(df))
+            df1 = df["games"].apply(pd.Series)
+            df2 = pd.concat([df1.drop(['white'], axis=1), df1['white'].apply(pd.Series)], axis=1)
+            df3 = pd.concat([df2.drop(['black'], axis=1), df2['black'].apply(pd.Series)], axis=1)
+            if 'start_time' in df3.columns:
+                del df3['start_time']
+            if 'tournament' in df3.columns:
+                del df3['tournament']
+            print(df3.columns)
+            df3.columns = ['url', 'pgn', 'time_control', 'end_time', 'rated', 'fen', 'time_class',
+                           'rules', 'rating_white', 'result_white', 'id_white', 'username_white', 'rating_black',
+                           'result_black',
+                           'id_black', 'username_black']
 
-    df.columns = ['url', 'pgn', 'time_control', 'end_time', 'rated', 'fen', 'time_class',
-                   'rules', 'rating_white', 'result_white', 'id_white', 'username_white', 'rating_black',
-                   'result_black',
-                   'id_black', 'username_black']
-
-    df = df
-    print(df.head())
-    del df['pgn']
-    del df['url']
-    del df['id_white']
-    del df['id_black']
-    del df['fen']
-    df['end_time'] = pd.to_datetime(df["end_time"], unit='s').astype('datetime64[ns, Asia/Bangkok]')
+            df = df3
+            #print(df.head())
+            del df['pgn']
+            del df['url']
+            del df['id_white']
+            del df['id_black']
+            del df['fen']
+            df['end_time'] = pd.to_datetime(df["end_time"], unit='s').astype('datetime64[ns, {0}]'.format(timezone[0]))
+            if all_df is not None:
+                all_df = all_df.append(df)
+            else:
+                all_df = df
+    df = all_df
     hours = df.end_time.dt.hour
     df = pd.concat([df, pd.DataFrame(hours.rename('hour'), index=df.index)], axis=1)
+    df['hour'] = df['hour'].apply(lambda x: 24 if x == 0 else x)
     df['user_result'] = df['result_white']
-    df.loc[df['username_black'] == 'categoriaopuesta', 'user_result'] = \
-    df[df['username_black'] == 'categoriaopuesta']['result_black']
+    df.loc[df['username_black'] == username, 'user_result'] = \
+    df[df['username_black'] == username]['result_black']
     df['user_color'] = 'white'
-    df.loc[df['username_black'] == 'categoriaopuesta', 'user_color'] = 'black'
+    df.loc[df['username_black'] == username, 'user_color'] = 'black'
     df['user_rating'] = df['rating_white']
-    df.loc[df['username_black'] == 'categoriaopuesta', 'user_rating'] = \
-    df[df['username_black'] == 'categoriaopuesta']['rating_black']
+    df.loc[df['username_black'] == username, 'user_rating'] = \
+    df[df['username_black'] == username]['rating_black']
     df['opponent_rating'] = df['rating_white']
-    df.loc[df['username_black'] != 'categoriaopuesta', 'opponent_rating'] = \
-    df[df['username_black'] != 'categoriaopuesta']['rating_black']
+    df.loc[df['username_black'] != username, 'opponent_rating'] = \
+    df[df['username_black'] != username]['rating_black']
     df['username_opponent'] = df['username_white']
-    df.loc[df['username_black'] != 'categoriaopuesta', 'username_opponent'] = \
-    df[df['username_black'] != 'categoriaopuesta']['username_black']
+    df.loc[df['username_black'] != username, 'username_opponent'] = \
+    df[df['username_black'] != username]['username_black']
 
     del df['rating_white']
     del df['result_white']
@@ -382,21 +499,68 @@ def user_games(logo):
     del df['result_black']
     del df['username_black']
     del df['username_white']
-    #print(df.columns)
-    return df.to_json(orient='split')
+    print('finished making main table')
+    print(df.columns)
+    print(df.head())
+    return df.to_json(orient='split'), '  '
 
-
-@dash_app.callback(Output('filtered-dff', 'children'), [Input('hidden-dff', 'children'), Input('color-dropdown', 'value')])
-def update_table(original_df, colors):
+@dash_app.callback(Output('intermediate-dff', 'children'), [Input('hidden-dff', 'children')])
+def update_table(original_df):
+    print('making intermediate df')
     dff = pd.read_json(original_df, orient='split')
+    return dff.to_json(orient='split')
+
+@dash_app.callback(Output('filtered-dff', 'children'), [Input('intermediate-dff', 'children'),
+                                                        Input('color-dropdown', 'value'),
+                                                        Input('month-range', 'start_date'),
+                                                        Input('month-range', 'end_date'),
+                                                        Input('time-class-dropdown', 'value')],
+                                                        [State('color-dropdown', 'value'),
+                                                         State('month-range', 'start_date'),
+                                                         State('month-range', 'end_date'),
+                                                         State('time-class-dropdown', 'value')
+                                                        ]
+                   )
+def update_table(original_df, colors_i, start_date_i, end_date_i, time_class_i, colors, start_date, end_date, time_class):
+    dff = pd.read_json(original_df, orient='split')
+    print('getting all states of filters')
+    print(dff.head())
+    if not colors:
+        colors = ['black', 'white']
+    if not start_date:
+        print('no start_date')
+        start_date = (dt.today().date() - timedelta(days=600))
+    else:
+        print('found start_date')
+        print('this is the found start_date:' + start_date)
+        start_date = dt.strptime(start_date, '%Y-%m-%d').date()
+        print('this is the new date:')
+        print(start_date)
+    if not end_date:
+        end_date = dt.today().date()
+    else:
+        end_date = dt.strptime(end_date, '%Y-%m-%d').date()
+    print(colors)
+    print(start_date)
+    print(end_date)
+    print(time_class)
     dff = dff[dff['user_color'].isin(colors)]
+    dff = dff[dff['time_class'].isin(time_class)]
+    dff = dff[dff['rules'].isin(['chess'])]
+    dff = dff[dff['end_time'].apply(lambda x: x.date() > start_date)]
+    dff = dff[dff['end_time'].apply(lambda x: x.date() < end_date)]
     print(dff.head())
     return dff.to_json(orient='split')
 
+@dash_app.callback(Output('month-range', 'initial_visible_month'), [Input('month-range', 'start_date')])
+def update_visible_month(start_date):
+    return start_date
 
 @dash_app.callback([Output("table_df", "data"), Output('table_df', 'columns')], [Input('filtered-dff', 'children')])
 def update_table(jsonified_cleaned_data):
+    print('making table_df')
     dff = pd.read_json(jsonified_cleaned_data, orient='split')
+    print(dff.head())
     return dff.values, columns
 
 
@@ -404,12 +568,14 @@ def update_table(jsonified_cleaned_data):
 
 @dash_app.callback(Output('led-games-played', 'value'), [Input('filtered-dff', 'children')])
 def update_style(filtered_df):
+    print('getting led games played')
     dff = pd.read_json(filtered_df, orient='split')
     games_played = dff['end_time'].count()
     return games_played
 
 @dash_app.callback(Output('led-elo', 'value'), [Input('filtered-dff', 'children')])
 def update_style(filtered_df):
+    print('getting led elo')
     dff = pd.read_json(filtered_df, orient='split')
     elo = dff[dff['end_time'] == max(dff['end_time'])]['user_rating'].values[0]
     return elo
@@ -432,6 +598,7 @@ def update_style(filtered_df):
     Output('hourly-chart', 'figure'),
     [Input('filtered-dff', 'children')])
 def display_output(filtered_dff):
+    print('making hourly chart')
     dff = pd.read_json(filtered_dff, orient='split')
     def win_games(x):
         return (x == 'win').sum()
@@ -487,6 +654,7 @@ def display_output(filtered_dff):
     Output('pie-chart', 'figure'),
     [Input('filtered-dff', 'children')])
 def display_output(filtered_dff):
+    print('making pie chart')
     dff = pd.read_json(filtered_dff, orient='split')
     def is_win(val):
         if val in ('win', 'threecheck', 'kingofthehill'):
@@ -520,6 +688,7 @@ def display_output(filtered_dff):
     Output('daily-elo-chart', 'figure'),
     [Input('filtered-dff', 'children')])
 def display_output(filtered_dff):
+    print('making daily elo chart')
     dff = pd.read_json(filtered_dff, orient='split')
     dff['date'] = dff['end_time'].apply(lambda x: x.date())
     daily_elo = dff.groupby(['date'])['user_rating'].agg(max).reset_index()
