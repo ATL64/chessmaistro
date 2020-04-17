@@ -184,7 +184,7 @@ dash_app.layout = html.Div([
 
         ###### FIRST TAB: INPUT USER ######
 
-        dcc.Tab(label='Overview Stats', children=[
+        dcc.Tab(label='Username', children=[
             html.Br(),
             html.Br(),
             html.Br(),
@@ -236,6 +236,7 @@ dash_app.layout = html.Div([
                         style={'display': 'inline-block', 'marginLeft': 40}),
             dcc.Loading(id="loading-1", children=[html.Div(id="loading-output-1")], type="default",
                         style={'display': 'inline-block', 'marginLeft': 60}),
+            html.Br(),
             html.H5(
                 'Once it has finished loading, you can go to the other tabs to see your stats'
                 , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
@@ -375,8 +376,6 @@ dash_app.layout = html.Div([
     ])
 
 
-
-
                                                             #####################
                                                             ###### CALLBACKS ####
                                                             #####################
@@ -386,7 +385,7 @@ dash_app.layout = html.Div([
 ###############################
 
 
-@dash_app.callback([Output('hidden-dff', 'children'), Output("loading-output-1", "children")],
+@dash_app.callback([Output('hidden-dff', 'children'), Output('loading-output-1', 'children')],
                    [Input('fetch-data-button', 'n_clicks')],
                    [State('username', 'value'), State('timezone-dropdown', 'value')])
 def user_games(n_clicks, username_input, timezone_input):
@@ -411,7 +410,7 @@ def user_games(n_clicks, username_input, timezone_input):
     all_df = None
 
     if not username_input:
-        months_final = ['2020-01-01']
+        months_final = ['2020-03-01']
     else:
         months_final = list_months
 
@@ -433,7 +432,6 @@ def user_games(n_clicks, username_input, timezone_input):
                     print('read into df')
                     df = pd.read_json(data)
                 print('succesfully read into df')
-
             except:
                 if i < tries - 1:  # i is zero indexed
                     print('api call failed, retrying')
@@ -441,8 +439,9 @@ def user_games(n_clicks, username_input, timezone_input):
                     time.sleep(3)
                     continue
                 else:
-                    raise
+                    Exception('all retries failed for api')
             break
+        print(len(df))
         if len(df) > 0:
             # urllib.request.urlretrieve(url, os.getcwd() + r"/" + filename_month + ".pgn")  # change
             print(".pgn has been downloaded.")
@@ -507,6 +506,9 @@ def user_games(n_clicks, username_input, timezone_input):
 @dash_app.callback(Output('intermediate-dff', 'children'), [Input('hidden-dff', 'children')])
 def update_table(original_df):
     print('making intermediate df')
+    if original_df is None:
+        raise Exception('the original_df was None, aborting callback chain')
+    print(original_df)
     dff = pd.read_json(original_df, orient='split')
     return dff.to_json(orient='split')
 
@@ -564,14 +566,13 @@ def update_table(jsonified_cleaned_data):
     return dff.values, columns
 
 
-
-
 @dash_app.callback(Output('led-games-played', 'value'), [Input('filtered-dff', 'children')])
 def update_style(filtered_df):
     print('getting led games played')
     dff = pd.read_json(filtered_df, orient='split')
     games_played = dff['end_time'].count()
     return games_played
+
 
 @dash_app.callback(Output('led-elo', 'value'), [Input('filtered-dff', 'children')])
 def update_style(filtered_df):
@@ -580,15 +581,6 @@ def update_style(filtered_df):
     elo = dff[dff['end_time'] == max(dff['end_time'])]['user_rating'].values[0]
     return elo
 
-
-# @dash_app.callback([Output('month-range', 'min'), Output('month-range', 'max'), Output('month-range', 'value')],
-#                    [Input('hidden-dff', 'children')])
-# def date_min_max(hidden_df):
-#     hidden_dff = pd.read_json(hidden_df, orient='split')
-#     min_date=min(hidden_dff['end_time']).date()
-#     max_date=max(hidden_dff['end_time']).date()
-#     return min_date, max_date, [min_date, max_date]
-#
 
 ####################
 # CHARTS CALLBACKS #
@@ -599,22 +591,29 @@ def update_style(filtered_df):
     [Input('filtered-dff', 'children')])
 def display_output(filtered_dff):
     print('making hourly chart')
-    dff = pd.read_json(filtered_dff, orient='split')
+    dff_h = pd.read_json(filtered_dff, orient='split')
+
     def win_games(x):
         return (x == 'win').sum()
 
     def all_games(x):
         return (x != 'this is to count all').sum()
 
-    print(dff.columns)
-    hourly_stats = dff.groupby(['hour'])['user_result'].agg({all_games}).reset_index()
-    hourly_ext = dff.groupby(['hour'])['user_result'].agg({win_games}).reset_index()
+    print(dff_h.columns)
+    hourly_stats = dff_h.groupby(['hour'])['user_result'].agg({all_games}).reset_index()
+    hourly_ext = dff_h.groupby(['hour'])['user_result'].agg({win_games}).reset_index()
     hourly_stats = pd.merge(hourly_stats, hourly_ext, on='hour', how='left')
     hourly_stats['perc_win'] = hourly_stats['win_games'] / hourly_stats['all_games']
     h = hourly_stats[hourly_stats['all_games'] > 19]
     h.reset_index(level=0, inplace=True)
     h['win_perc'] = pd.Series(["{0:.0f}%".format(val * 100) for val in h['perc_win']], index=h.index)
-    print(dff.columns)
+    print(h.columns)
+    print('hourly head')
+    print(dff_h.head())
+    print('hourly head 2')
+    print(h.head())
+    print('hourly head 3')
+    print(hourly_stats.head())
 
     data = [
     go.Bar(
