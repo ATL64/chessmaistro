@@ -1,3 +1,5 @@
+import news_strings as ns
+import random as rd
 import dash
 from dash.dependencies import Input, Output, State
 import dash_table
@@ -150,7 +152,7 @@ def build_quick_stats_panel():
 
 # Make list of months to get data from api
 now = dt(dt.now().year, dt.now().month, 1)
-ctr = dt(2020, 1, 1)
+ctr = dt(2020, 3, 1)
 list_months = [ctr.strftime('%Y-%m-%d')]
 
 while ctr < now:
@@ -222,7 +224,7 @@ dash_app.layout = html.Div([
                              {'label': 'America/Tijuana', 'value': 'America/Tijuana'},
                              {'label': 'America/Vancouver', 'value': 'America/Vancouver'}
                          ],
-                         value='America/Montevideo',
+                         placeholder="Select a Timezone",
                          style={'display': 'inline-block', 'width': '300px', 'marginLeft': 20,
                                 'backgroundColor': '#222222'}, ),
             html.Br(),
@@ -350,8 +352,10 @@ dash_app.layout = html.Div([
 
             html.Br()], style=tab_style, selected_style=tab_selected_style),
 
-    dcc.Tab(label='Your News', children=[html.Div([html.H1('Personalized news articles', style={'display': 'inline-block', 'marginLeft': 60,'marginBottom': 500, 'marginTop': 500}),
-                                                         ])
+    dcc.Tab(label='Your News',
+            children=[html.Div([
+                        html.Div([],id='your-news')
+                                ])
                                                ], style=tab_style,
             selected_style=tab_selected_style),
         # The  &nbsp; are to make empty lines
@@ -396,6 +400,7 @@ def user_games(n_clicks, username_input, timezone_input):
         username = 'categoriaopuesta'
     else:
         username = username_input
+    print(timezone_input)
     if not timezone_input:
         timezone = ['Asia/Bangkok']
     else:
@@ -404,13 +409,13 @@ def user_games(n_clicks, username_input, timezone_input):
     # updates both the hidden dff and the global dff
     print('starting hidden-dff')
     baseUrl = "https://api.chess.com/pub/player/" + username + "/games/"
-    stats_url = "https://api.chess.com/pub/player/" + username + "/stats"
-    archivesUrl = baseUrl + "archives"
+    #stats_url = "https://api.chess.com/pub/player/" + username + "/stats"
+    #archivesUrl = baseUrl + "archives"
 
     all_df = None
 
     if not username_input:
-        months_final = ['2020-03-01']
+        months_final = ['2020-04-01']
     else:
         months_final = list_months
 
@@ -468,7 +473,10 @@ def user_games(n_clicks, username_input, timezone_input):
             del df['id_white']
             del df['id_black']
             del df['fen']
+            print(timezone[0])
             df['end_time'] = pd.to_datetime(df["end_time"], unit='s').astype('datetime64[ns, {0}]'.format(timezone[0]))
+            df['end_time'] = df['end_time'].apply(lambda x: x.strftime('%Y-%m-%d  %H:%M:%S')).apply(
+                lambda x: dt.strptime(x, '%Y-%m-%d  %H:%M:%S'))
             if all_df is not None:
                 all_df = all_df.append(df)
             else:
@@ -508,7 +516,7 @@ def update_table(original_df):
     print('making intermediate df')
     if original_df is None:
         raise Exception('the original_df was None, aborting callback chain')
-    print(original_df)
+    #print(original_df)
     dff = pd.read_json(original_df, orient='split')
     return dff.to_json(orient='split')
 
@@ -706,6 +714,99 @@ def display_output(filtered_dff):
         font={'color': '#ffffff'},
     )
     return {'data': data, 'layout': layout}
+
+@dash_app.callback([Output('your-news', 'children')],
+                   [Input('filtered-dff', 'children')],
+                   [State('username', 'value')])
+def make_news(filtered_dff, username_input):
+    dff = pd.read_json(filtered_dff, orient='split')
+    if not username_input:
+        username_input = 'categoriaopuesta'
+    max_day = max(dff['end_time']).date()
+    if max_day != (dt.today().date()-timedelta(days=1)):
+        titles = ns.titles_0
+        sen_1 = ns.sen_1_0
+        max_day_before = max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating'])
+    else:
+        max_yesterday = max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]['user_rating']
+            )
+        max_day_before = max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == max(
+                dff[dff['end_time'].apply(lambda x: x.date()) < (dt.today().date() - timedelta(days=1))]['end_time'])
+                .date()]['user_rating']
+            )
+        diff_rating = max_yesterday - max_day_before
+        if diff_rating > 40:
+            titles = ns.titles_a
+            sen_1 = ns.sen_1_a
+        elif diff_rating in range(15, 40):  # intervals in range are semi-open, closed on left side
+            titles = ns.titles_b
+            sen_1 = ns.sen_1_b
+        elif diff_rating in range(-15, 15):
+            titles = ns.titles_c
+            sen_1 = ns.sen_1_c
+        elif diff_rating in range(-40, 15):
+            titles = ns.titles_d
+            sen_1 = ns.sen_1_d
+        elif diff_rating < -40:
+            titles = ns.titles_e
+            sen_1 = ns.sen_1_e
+    print(max_yesterday)
+    print(max_day_before)
+    abs_diff_rating = abs(diff_rating)
+    #if max_yesterday > max_day_before:
+    news = [html.Div(children=[
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        html.H1(rd.choice(titles).format(username= username_input, pts_diff_day_before=str(abs_diff_rating)),
+                style={'justify': 'center', 'align': 'center', 'text-align': 'center'}
+                ),
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        html.H4(
+            rd.choice(sen_1).format(username=username_input)
+        ),
+        html.Br(),
+        html.Br(),
+        html.H4(
+            'These were not bad performances from the opponents but not bad gets you nowhere against the gold '
+            'standard in world chess. There were chances for the rival sides, even after {username}’s first '
+            'checkmate, and there simply was no player of quality to overcome the cunning skills of our '
+            'present era’s chess star. That was the difference in the end. {username}’s sniper vision overwhelmed'
+            ' the board once and again, leaving little room to chance.'
+            .format(username=username_input)
+        ),
+        html.Br(),
+        html.Br(),
+        html.H4(
+                'If the second checkmate was not a masterpiece, then the third one was the consequence of a rock '
+                'solid opening and then an inaccuracy on the rival’s part in the middle game, just as the match was'
+                'starting to open up to complex tactical variants.'
+                .format(username=username_input)
+        ),
+        html.Br(),
+        html.Br(),
+        html.H4(
+                '{username} reached his highest rating of {best_elo} on {date_best}, so he is currently '
+                '{diff_with_max} points {above_below} the record.  The universe of chess is eagerly awaiting the '
+                'next matches to see if {username} can keep climbing the rating ladder or if the competitive '
+                'pressure will make him stumble.'
+                .format(username=username_input, date_best='2019-01-01', diff_with_max='200', best_elo='2800',
+                        above_below='above')
+        ),
+        html.Br(),
+        html.Br(),
+        html.H4(
+            '\"Every game yesterday had {username}s signature all over them, making the best out of static '
+            'positional matches and pushing forward risky maneuvers. He makes chess seem like a walk in the park\"'
+            ', Garry Kasparov pointed out yesterday for ESPN.'.format(username=username_input)
+        )], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
+            ]
+    return news
 
 
 
