@@ -18,6 +18,8 @@ from urllib.request import Request, urlopen
 from datetime import datetime as dt
 import chess
 import chess.svg
+import re
+import io
 from chess import pgn
 import datetime
 import json
@@ -171,6 +173,7 @@ dash_app.layout = html.Div([
     ###### HIDDEN DIV TO SHARE GLOBAL DATAFRAME
     html.Div(id='hidden-dff', style={'display': 'none'}),
     html.Div(id='filtered-dff', style={'display': 'none'}),
+    html.Div(id='hidden-pgn', style={'display': 'none'}),
     html.Div(id='games_played', style={'display': 'none'}),
     html.Div(id='intermediate-dff', style={'display': 'none'}),
 
@@ -358,9 +361,17 @@ dash_app.layout = html.Div([
 
     dcc.Tab(label='Your News',
             children=[html.Div([
-                        html.Div([],id='your-news')
-                                ])
-                                               ], style=tab_style,
+                        html.Div([], id='your-news'),
+                        html.Div([], id='your-news-chessboard'),
+                        html.Div(children = [
+                            dbc.Button('<', id='move-back', n_clicks=0, className="btn btn-info",
+                                       style={'display': 'inline-block', 'marginLeft': 40}),
+                            dbc.Button('>', id='move-forward', n_clicks=0, className="btn btn-info",
+                                       style={'display': 'inline-block', 'marginLeft': 40}),
+                                 ], style={'justify-content': 'center', 'display': 'flex'}
+                        ),
+                        html.Div([], id='your-news-last')
+                                ])], style=tab_style,
             selected_style=tab_selected_style),
         # The  &nbsp; are to make empty lines
     dcc.Tab(label='About this site',
@@ -393,7 +404,8 @@ dash_app.layout = html.Div([
 ###############################
 
 
-@dash_app.callback([Output('hidden-dff', 'children'), Output('loading-output-1', 'children')],
+@dash_app.callback([Output('hidden-dff', 'children'), Output('loading-output-1', 'children'),
+                    Output('hidden-pgn', 'children')],
                    [Input('fetch-data-button', 'n_clicks')],
                    [State('username', 'value'), State('timezone-dropdown', 'value')])
 def user_games(n_clicks, username_input, timezone_input):
@@ -472,7 +484,6 @@ def user_games(n_clicks, username_input, timezone_input):
 
             df = df3
             #print(df.head())
-            del df['pgn']
             del df['url']
             del df['id_white']
             del df['id_black']
@@ -510,10 +521,30 @@ def user_games(n_clicks, username_input, timezone_input):
     del df['result_black']
     del df['username_black']
     del df['username_white']
-    print('finished making main table')
+    print('finished making main table, only pgn next')
     print(df.columns)
     print(df.head())
-    return df.to_json(orient='split'), '  '
+
+    last_day = df['end_time'].apply(lambda x: x.date()) == max(df['end_time'].apply(lambda x: x.date()))
+    wins = df['user_result'] == 'win'
+    not_nulls = ~df['pgn'].isnull()
+    max_opponent = df['opponent_rating'] == max(df[not_nulls & last_day & wins]['opponent_rating'])
+    df_string = df[not_nulls & last_day & wins & max_opponent]
+    if not df_string.empty:
+        print(df_string.head())
+        stringy = df_string['pgn'].iloc[0].replace('\n', '')
+        user_color_val = df_string['user_color'].iloc[0]
+        win_defeat = 'win'
+    else:
+        stringy = df[last_day & ~df1['pgn'].isnull()]['pgn'].iloc[0].replace('\n', '')
+        user_color_val = df[last_day & ~df1['pgn'].isnull()]['user_color'].iloc[0]
+        win_defeat = 'defeat'
+    mod_stringy = re.sub('{\\[%clk [0-9]:[0-9][0-9]:[0-9][0-9].[0-9]\\]}', '', stringy)
+    mod_stringy = re.sub('{\\[%clk [0-9]:[0-9][0-9]:[0-9][0-9]\\]}', '', mod_stringy)
+    mod_stringy = re.sub('\\[.*\\]', '', mod_stringy)
+    mod_stringy_final = json.loads('{"value": "' + mod_stringy + '"}')
+    del df['pgn']
+    return df.to_json(orient='split'), '  ', [mod_stringy_final, user_color_val, win_defeat]
 
 @dash_app.callback(Output('intermediate-dff', 'children'), [Input('hidden-dff', 'children')])
 def update_table(original_df):
@@ -725,20 +756,6 @@ def display_output(filtered_dff):
                    [Input('filtered-dff', 'children')],
                    [State('username', 'value')])
 def make_news(filtered_dff, username_input):
-    with open("example_game.pgn") as pgn:
-        first_game = chess.pgn.read_game(pgn)
-    d = {}
-    board = first_game.board()
-    boards = []
-    i = 0
-    for move in first_game.mainline_moves():
-        d["board_{0}".format(i)] = first_game.board()
-        for move_ in first_game.mainline_moves():
-            if move == move_:
-                break
-            d["board_{0}".format(i)].push(move_)
-        boards.append(d["board_{0}".format(i)])
-        i = i + 1
     dff = pd.read_json(filtered_dff, orient='split')
     if not username_input:
         username_input = 'categoriaopuesta'
@@ -786,13 +803,11 @@ def make_news(filtered_dff, username_input):
                 sen_2 = ns.sen_2_record
             else:
                 sen_2 = ns.sen_2_b
-            sen_3 = ns.sen_3_b
         elif diff_rating in range(-15, 15):
             titles = ns.titles_c
             images = ns.images_c
             sen_1 = ns.sen_1_c
             sen_2 = ns.sen_2_c
-            sen_3 = ns.sen_3_c
         elif diff_rating in range(-30, 15):
             titles = ns.titles_d
             images = ns.images_d
@@ -803,13 +818,10 @@ def make_news(filtered_dff, username_input):
             titles = ns.titles_e
             images = ns.images_e
             sen_2 = ns.sen_2_e
-            sen_3 = ns.sen_3_e
     print(max_yesterday)
     print(max_day_before)
     image_filename_news = rd.choice(images)  # replace with your own image
     encoded_image_a = base64.b64encode(open('assets/' + image_filename_news, 'rb').read())
-    encoded_board = base64.b64encode(bytes(str(chess.svg.board(board=boards[8])),'UTF-8'))
-    svg = 'data:image/svg+xml;base64,{}'.format(encoded_board.decode())
     news = [html.Div(children=[
         html.Br(),
         html.Br(),
@@ -827,26 +839,122 @@ def make_news(filtered_dff, username_input):
         html.H4(
             rd.choice(sen_1).format(username=username_input)
         ),
-        html.Br(),
-        html.Br(),
-
         html.H4(rd.choice(sen_2).format(username=username_input, max_yesterday=max_yesterday,
+                                        matches_played_y=matches_played_y, matches_won_y=matches_won_y,
+                                        matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
+                                        abs_diff_rating=abs_diff_rating)
+        )
+        ], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
+            ]
+    return news
+
+@dash_app.callback([Output('your-news-chessboard', 'children')],
+                   [Input('hidden-pgn', 'children'),
+                    Input('move-forward', 'n_clicks'),
+                    Input('move-back', 'n_clicks'),
+                    ],
+                   [State('move-forward', 'n_clicks'),
+                    State('move-back', 'n_clicks'),
+                    State('username', 'value')]
+                   )
+def make_news_chessboard(hidden_pgn, click_for, click_back, n_forward, n_back, username_input):
+    #print(hidden_pgn[0]['value'])
+    user_color_val = hidden_pgn[1]
+    win_defeat = hidden_pgn[2]
+    pgn_content = io.StringIO(hidden_pgn[0]['value'])
+    first_game = chess.pgn.read_game(pgn_content)
+    d = {}
+    d["board_{0}".format(0)] = first_game.board()
+    boards = [d["board_{0}".format(0)]]
+    i = 1
+    b = 0
+    for move in first_game.mainline_moves():
+        a = 0
+        d["board_{0}".format(i)] = first_game.board()
+        for move_ in first_game.mainline_moves():
+            d["board_{0}".format(i)].push(move_)
+            if a == b:
+                break
+            a = a + 1
+        boards.append(d["board_{0}".format(i)])
+        b = b + 1
+        i = i + 1
+    if n_forward - n_back >= 0:
+        k = n_forward - n_back
+    elif (n_forward - n_back) > (i-1):
+        k = i-1
+    else:
+        k = 0
+    if not username_input:
+        username_input = 'categoriaopuesta'
+    encoded_board = base64.b64encode(bytes(str(chess.svg.board(board=boards[k])), 'UTF-8'))
+    svg = 'data:image/svg+xml;base64,{}'.format(encoded_board.decode())
+    news = [html.Div(children=[
+        html.H4(
+            'Lets take a look at one of yesterdays games, {username} has the {color} pieces and ends up in {win_defeat}'
+            ':'.format(username=username_input, color = user_color_val, win_defeat = win_defeat)
+        ),
+        html.Br(),
+        html.Div([html.Img(src=svg, style={'width': '50%', 'height': '50%'})],
+                 style={'justify-content': 'center', 'display': 'flex'}),
+        ], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
+            ]
+    return news
+
+@dash_app.callback([Output('your-news-last', 'children')],
+                   [Input('filtered-dff', 'children')],
+                   [State('username', 'value')])
+def make_news_last(filtered_dff, username_input):
+    dff = pd.read_json(filtered_dff, orient='split')
+    if not username_input:
+        username_input = 'categoriaopuesta'
+    max_day = max(dff['end_time']).date()
+    if max_day != (dt.today().date()-timedelta(days=1)):
+        sen_3 = ns.sen_3_0
+        rating_last_play = str(max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating']))
+        date_last_play = str(max(dff['end_time']).date())
+        #rating_last_play = max(dff[dff['end_time'].apply(lambda x: x.date()) == date_last_play)]['user_rating'])
+
+    else:
+        max_yesterday = max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]['user_rating']
+            )
+        max_day_before = max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == max(
+                dff[dff['end_time'].apply(lambda x: x.date()) < (dt.today().date() - timedelta(days=1))]['end_time'])
+                .date()]['user_rating']
+            )
+        diff_rating = max_yesterday - max_day_before
+        abs_diff_rating = str(abs(diff_rating))
+        dff_y = dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]
+        matches_played_y = str(len(dff_y['user_result']))
+        matches_won_y = str(len(dff_y[dff_y['user_result'] == 'win'].index))
+        matches_drawn_y = str(len(dff_y[dff_y['user_result'].isin(['stalemate', 'repetition', 'insufficient'])].index))
+        matches_lost_y = str(len(dff_y[~dff_y['user_result'].isin(['win', 'stalemate', 'repetition', 'insufficient'])].index))
+        if diff_rating > 30:
+            sen_3 = ns.sen_3_a
+        elif diff_rating in range(15, 30):  # intervals in range are semi-open, closed on left side
+            sen_3 = ns.sen_3_b
+        elif diff_rating in range(-15, 15):
+            sen_3 = ns.sen_3_c
+        elif diff_rating in range(-30, 15):
+            sen_3 = ns.sen_3_d
+        elif diff_rating < -30:
+            sen_3 = ns.sen_3_e
+    news = [html.Div(children=[
+        html.Br(),
+        html.Br(),
+        html.H4(rd.choice(sen_3).format(username=username_input, max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
                                         abs_diff_rating=abs_diff_rating)
         ),
         html.Br(),
-        html.Br(),
-        html.Div([html.Img(src=svg, style={'width': '50%', 'height': '50%'})],
-                 style={'justify-content': 'center', 'display': 'flex'}),
-        html.Br(),
-        html.Br(),
-        html.H4(rd.choice(sen_3).format(username=username_input)
-        )], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
+        html.Br()
+        ], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
             ]
     return news
-
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True, port=80)
