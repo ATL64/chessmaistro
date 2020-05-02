@@ -19,3 +19,4 @@ dash-daq
 dash-bootstrap-components
 sqlalchemy
 psycopg2
+python-chess

@@ -8,25 +8,28 @@ import dash_html_components as html
 import flask
 import dash_bootstrap_components as dbc
 import base64
-import pandas as pd  
-import psycopg2
-from sqlalchemy import create_engine
+import pandas as pd
 import plotly.graph_objs as go
 import dash_daq as daq
-import plotly.express as px
 import time
+from datetime import timedelta
+import contextlib
+from urllib.request import Request, urlopen
+from datetime import datetime as dt
+import chess
+import chess.svg
+from chess import pgn
+import datetime
+import json
+import psycopg2
+from sqlalchemy import create_engine
+import plotly.express as px
 import math
 import urllib
 import urllib.request
-from datetime import timedelta
-import contextlib
 import os
 import urllib
 import urllib.request
-from urllib.request import Request, urlopen
-from datetime import datetime as dt
-import datetime
-import json
 
 # Style the button: http://dash-bootstrap-components.opensource.faculty.ai/l/components/button
 
@@ -722,6 +725,20 @@ def display_output(filtered_dff):
                    [Input('filtered-dff', 'children')],
                    [State('username', 'value')])
 def make_news(filtered_dff, username_input):
+    with open("example_game.pgn") as pgn:
+        first_game = chess.pgn.read_game(pgn)
+    d = {}
+    board = first_game.board()
+    boards = []
+    i = 0
+    for move in first_game.mainline_moves():
+        d["board_{0}".format(i)] = first_game.board()
+        for move_ in first_game.mainline_moves():
+            if move == move_:
+                break
+            d["board_{0}".format(i)].push(move_)
+        boards.append(d["board_{0}".format(i)])
+        i = i + 1
     dff = pd.read_json(filtered_dff, orient='split')
     if not username_input:
         username_input = 'categoriaopuesta'
@@ -791,6 +808,8 @@ def make_news(filtered_dff, username_input):
     print(max_day_before)
     image_filename_news = rd.choice(images)  # replace with your own image
     encoded_image_a = base64.b64encode(open('assets/' + image_filename_news, 'rb').read())
+    encoded_board = base64.b64encode(bytes(str(chess.svg.board(board=boards[8])),'UTF-8'))
+    svg = 'data:image/svg+xml;base64,{}'.format(encoded_board.decode())
     news = [html.Div(children=[
         html.Br(),
         html.Br(),
@@ -810,11 +829,16 @@ def make_news(filtered_dff, username_input):
         ),
         html.Br(),
         html.Br(),
+
         html.H4(rd.choice(sen_2).format(username=username_input, max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
                                         abs_diff_rating=abs_diff_rating)
         ),
+        html.Br(),
+        html.Br(),
+        html.Div([html.Img(src=svg, style={'width': '50%', 'height': '50%'})],
+                 style={'justify-content': 'center', 'display': 'flex'}),
         html.Br(),
         html.Br(),
         html.H4(rd.choice(sen_3).format(username=username_input)
