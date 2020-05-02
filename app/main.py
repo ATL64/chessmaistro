@@ -239,6 +239,7 @@ dash_app.layout = html.Div([
             dcc.Loading(id="loading-1", children=[html.Div(id="loading-output-1")], type="default",
                         style={'display': 'inline-block', 'marginLeft': 60}),
             html.Br(),
+            html.Br(),
             html.H5(
                 'Once it has finished loading, you can go to the other tabs to see your stats'
                 , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
@@ -663,12 +664,14 @@ def display_output(filtered_dff):
 def display_output(filtered_dff):
     print('making pie chart')
     dff = pd.read_json(filtered_dff, orient='split')
+
     def is_win(val):
         if val in ('win', 'threecheck', 'kingofthehill'):
             return 'win'
         if val in ('insufficient', 'repetition', 'stalemate'):
             return 'draw'
         return 'lose'
+
     def all_games(x):
         return (x != 'this is to count all').sum()
 
@@ -725,9 +728,14 @@ def make_news(filtered_dff, username_input):
     max_day = max(dff['end_time']).date()
     if max_day != (dt.today().date()-timedelta(days=1)):
         titles = ns.titles_0
+        images = ns.images_0
         sen_1 = ns.sen_1_0
-        max_day_before = max(
-            dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating'])
+        sen_3 = ns.sen_3_0
+        rating_last_play = str(max(
+            dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating']))
+        date_last_play = str(max(dff['end_time']).date())
+        #rating_last_play = max(dff[dff['end_time'].apply(lambda x: x.date()) == date_last_play)]['user_rating'])
+
     else:
         max_yesterday = max(
             dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]['user_rating']
@@ -738,33 +746,63 @@ def make_news(filtered_dff, username_input):
                 .date()]['user_rating']
             )
         diff_rating = max_yesterday - max_day_before
-        if diff_rating > 40:
+        abs_diff_rating = str(abs(diff_rating))
+        dff_y = dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]
+        matches_played_y = str(len(dff_y['user_result']))
+        matches_won_y = str(len(dff_y[dff_y['user_result'] == 'win'].index))
+        matches_drawn_y = str(len(dff_y[dff_y['user_result'].isin(['stalemate', 'repetition', 'insufficient'])].index))
+        matches_lost_y = str(len(dff_y[~dff_y['user_result'].isin(['win', 'stalemate', 'repetition', 'insufficient'])].index))
+        if diff_rating > 30:
             titles = ns.titles_a
+            images = ns.images_a
             sen_1 = ns.sen_1_a
-        elif diff_rating in range(15, 40):  # intervals in range are semi-open, closed on left side
+            if max_yesterday>=max(dff['user_rating']):
+                sen_2 = ns.sen_2_record
+            else:
+                sen_2 = ns.sen_2_a
+            sen_3 = ns.sen_3_a
+        elif diff_rating in range(15, 30):  # intervals in range are semi-open, closed on left side
             titles = ns.titles_b
+            images = ns.images_b
             sen_1 = ns.sen_1_b
+            if max_yesterday>=max(dff['user_rating']):
+                sen_2 = ns.sen_2_record
+            else:
+                sen_2 = ns.sen_2_b
+            sen_3 = ns.sen_3_b
         elif diff_rating in range(-15, 15):
             titles = ns.titles_c
+            images = ns.images_c
             sen_1 = ns.sen_1_c
-        elif diff_rating in range(-40, 15):
+            sen_2 = ns.sen_2_c
+            sen_3 = ns.sen_3_c
+        elif diff_rating in range(-30, 15):
             titles = ns.titles_d
+            images = ns.images_d
             sen_1 = ns.sen_1_d
-        elif diff_rating < -40:
+            sen_2 = ns.sen_2_d
+            sen_3 = ns.sen_3_d
+        elif diff_rating < -30:
             titles = ns.titles_e
-            sen_1 = ns.sen_1_e
+            images = ns.images_e
+            sen_2 = ns.sen_2_e
+            sen_3 = ns.sen_3_e
     print(max_yesterday)
     print(max_day_before)
-    abs_diff_rating = abs(diff_rating)
-    #if max_yesterday > max_day_before:
+    image_filename_news = rd.choice(images)  # replace with your own image
+    encoded_image_a = base64.b64encode(open('assets/' + image_filename_news, 'rb').read())
     news = [html.Div(children=[
         html.Br(),
         html.Br(),
         html.Br(),
-        html.H1(rd.choice(titles).format(username= username_input, pts_diff_day_before=str(abs_diff_rating)),
+        html.H1(rd.choice(titles).format(username= username_input, pts_diff_day_before=abs_diff_rating),
                 style={'justify': 'center', 'align': 'center', 'text-align': 'center'}
                 ),
         html.Br(),
+        html.Br(),
+        html.Div([html.Img(src='data:image/png;base64,{}'.format(encoded_image_a.decode()))],
+                 style={ 'justify-content': 'center', 'display': 'flex'}
+                 ),
         html.Br(),
         html.Br(),
         html.H4(
@@ -772,38 +810,14 @@ def make_news(filtered_dff, username_input):
         ),
         html.Br(),
         html.Br(),
-        html.H4(
-            'These were not bad performances from the opponents but not bad gets you nowhere against the gold '
-            'standard in world chess. There were chances for the rival sides, even after {username}’s first '
-            'checkmate, and there simply was no player of quality to overcome the cunning skills of our '
-            'present era’s chess star. That was the difference in the end. {username}’s sniper vision overwhelmed'
-            ' the board once and again, leaving little room to chance.'
-            .format(username=username_input)
+        html.H4(rd.choice(sen_2).format(username=username_input, max_yesterday=max_yesterday,
+                                        matches_played_y=matches_played_y, matches_won_y=matches_won_y,
+                                        matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
+                                        abs_diff_rating=abs_diff_rating)
         ),
         html.Br(),
         html.Br(),
-        html.H4(
-                'If the second checkmate was not a masterpiece, then the third one was the consequence of a rock '
-                'solid opening and then an inaccuracy on the rival’s part in the middle game, just as the match was'
-                'starting to open up to complex tactical variants.'
-                .format(username=username_input)
-        ),
-        html.Br(),
-        html.Br(),
-        html.H4(
-                '{username} reached his highest rating of {best_elo} on {date_best}, so he is currently '
-                '{diff_with_max} points {above_below} the record.  The universe of chess is eagerly awaiting the '
-                'next matches to see if {username} can keep climbing the rating ladder or if the competitive '
-                'pressure will make him stumble.'
-                .format(username=username_input, date_best='2019-01-01', diff_with_max='200', best_elo='2800',
-                        above_below='above')
-        ),
-        html.Br(),
-        html.Br(),
-        html.H4(
-            '\"Every game yesterday had {username}s signature all over them, making the best out of static '
-            'positional matches and pushing forward risky maneuvers. He makes chess seem like a walk in the park\"'
-            ', Garry Kasparov pointed out yesterday for ESPN.'.format(username=username_input)
+        html.H4(rd.choice(sen_3).format(username=username_input)
         )], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
             ]
     return news
