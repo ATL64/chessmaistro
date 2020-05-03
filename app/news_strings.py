@@ -238,7 +238,7 @@ sen_3_b = ['\"He is getting better.  Will he be the best player in history some 
            ' to Fox Sports yesterday evening']
 
 # -15 to 15 elo points
-sen_3_c = ['\" Decent chess, but we want to see more from {username} \" said a fan yesterday to the media'
+sen_3_c = ['\"Decent chess, but we want to see more from {username} \" said a fan yesterday to the media'
            ]
 
 # -15 to -40 elo points
