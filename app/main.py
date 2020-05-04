@@ -199,11 +199,18 @@ dash_app.layout = html.Div([
             html.Br(),
             html.Br(),
             html.H5(
-                'Input your chess.com username: Hold on 10-20 seconds for data to be fetched'
+                'Input your chess.com username:'
                 , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
             html.Div(dcc.Input(id="username", type="text", placeholder="",
                                style={'marginLeft': 40, 'backgroundColor': '#222222', 'color': '#ffffff',
-                                      'height': '40px', 'border': '1px solid #c0c0c0', 'borderRadius': '3px',})),
+                                      'height': '40px', 'border': '1px solid #c0c0c0', 'borderRadius': '3px'})),
+            html.Br(),
+            html.H5(
+                'Input your name for the news article:'
+                , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+            html.Div(dcc.Input(id="realname", type="text", placeholder="",
+                               style={'marginLeft': 40, 'backgroundColor': '#222222', 'color': '#ffffff',
+                                      'height': '40px', 'border': '1px solid #c0c0c0', 'borderRadius': '3px'})),
             html.Br(),
             html.Br(),
             html.Br(),
@@ -250,6 +257,8 @@ dash_app.layout = html.Div([
             html.H5(
                 'Once it has finished loading, you can go to the other tabs to see your stats'
                 , style={'font-family': 'Courier New, monospace', 'marginLeft': 40}),
+            html.Br(),
+            html.Br(),
             ],style=tab_style,
                 selected_style=tab_selected_style),
         dcc.Tab(label='Your News',
@@ -343,7 +352,7 @@ dash_app.layout = html.Div([
                      ),
                 html.Br(),
                 html.Br(),
-                    ],style=tab_style,
+        ], style=tab_style,
                 selected_style=tab_selected_style),
 
 
@@ -757,12 +766,14 @@ def display_output(filtered_dff):
 
 @dash_app.callback([Output('your-news', 'children')],
                    [Input('filtered-dff', 'children')],
-                   [State('username', 'value')])
-def make_news(filtered_dff, username_input):
+                   [State('username', 'value'), State('realname', 'value')])
+def make_news(filtered_dff, username_input, realname_input):
     rd.seed(dt.today().date())
     dff = pd.read_json(filtered_dff, orient='split')
     if not username_input:
         username_input = 'categoriaopuesta'
+    if not realname_input:
+        realname_input = 'Chavo'
     max_day = max(dff['end_time']).date()
     if max_day != (dt.today().date()-timedelta(days=1)):
         titles = ns.titles_0
@@ -833,7 +844,7 @@ def make_news(filtered_dff, username_input):
         html.Br(),
         html.Br(),
         html.Br(),
-        html.H1(rd.choice(titles).format(username= username_input, pts_diff_day_before=abs_diff_rating),
+        html.H1(rd.choice(titles).format(username=realname_input, pts_diff_day_before=abs_diff_rating),
                 style={'justify': 'center', 'align': 'center', 'text-align': 'center'}
                 ),
         html.Br(),
@@ -844,9 +855,9 @@ def make_news(filtered_dff, username_input):
         html.Br(),
         html.Br(),
         html.H4(
-            rd.choice(sen_1).format(username=username_input)
+            rd.choice(sen_1).format(username=realname_input)
         ),
-        html.H4(rd.choice(sen_2).format(username=username_input, max_yesterday=max_yesterday,
+        html.H4(rd.choice(sen_2).format(username=realname_input, max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
                                         abs_diff_rating=abs_diff_rating, rating_last_play = rating_last_play)
@@ -862,9 +873,10 @@ def make_news(filtered_dff, username_input):
                     ],
                    [State('move-forward', 'n_clicks'),
                     State('move-back', 'n_clicks'),
-                    State('username', 'value')]
+                    State('username', 'value'),
+                    State('realname', 'value')]
                    )
-def make_news_chessboard(hidden_pgn, click_for, click_back, n_forward, n_back, username_input):
+def make_news_chessboard(hidden_pgn, click_for, click_back, n_forward, n_back, username_input, realname_input):
     rd.seed(dt.today().date())
     #print(hidden_pgn[0]['value'])
     user_color_val = hidden_pgn[1]
@@ -899,13 +911,15 @@ def make_news_chessboard(hidden_pgn, click_for, click_back, n_forward, n_back, u
         k = 0
     if not username_input:
         username_input = 'categoriaopuesta'
+    if not realname_input:
+        realname_input = 'Chavo'
     encoded_board = base64.b64encode(bytes(str(chess.svg.board(board=boards[k], flipped=bool_board)), 'UTF-8'))
     svg = 'data:image/svg+xml;base64,{}'.format(encoded_board.decode())
     news = [html.Div(children=[
         html.Br(),
         html.H4(
             'Lets take a look at one of yesterdays games, {username} has the {color} pieces and ends up in {win_defeat}'
-            ':'.format(username=username_input, color = user_color_val, win_defeat = win_defeat)
+            ':'.format(username=realname_input, color=user_color_val, win_defeat=win_defeat)
         ),
         html.Br(),
         html.Div([html.Img(src=svg, style={'width': '50%', 'height': '50%'})],
@@ -916,19 +930,22 @@ def make_news_chessboard(hidden_pgn, click_for, click_back, n_forward, n_back, u
 
 @dash_app.callback([Output('your-news-last', 'children')],
                    [Input('filtered-dff', 'children')],
-                   [State('username', 'value')])
-def make_news_last(filtered_dff, username_input):
+                   [State('username', 'value'),
+                    State('realname', 'value')])
+def make_news_last(filtered_dff, username_input, realname_input):
     rd.seed(dt.today().date())
     dff = pd.read_json(filtered_dff, orient='split')
     if not username_input:
         username_input = 'categoriaopuesta'
+    if not realname_input:
+        realname_input = 'Chavo'
     max_day = max(dff['end_time']).date()
     if max_day != (dt.today().date()-timedelta(days=1)):
         sen_3 = ns.sen_3_0
         max_yesterday = str(max(
             dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating']))
-        date_last_play = str(max(dff['end_time']).date())
-        rating_last_play = max(dff[dff['end_time'].apply(lambda x: x.date()) == date_last_play]['user_rating'])
+        #date_last_play = str(max(dff['end_time']).date())
+        rating_last_play = max_yesterday
         matches_played_y = ''
         matches_won_y = ''
         matches_drawn_y = ''
@@ -964,7 +981,7 @@ def make_news_last(filtered_dff, username_input):
     news = [html.Div(children=[
         html.Br(),
         html.Br(),
-        html.H4(rd.choice(sen_3).format(username=username_input, max_yesterday=max_yesterday,
+        html.H4(rd.choice(sen_3).format(username=realname_input , max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
                                         abs_diff_rating=abs_diff_rating, rating_last_play = rating_last_play)

@@ -19,10 +19,10 @@ images_b = ['good_image_1.gif', 'good_image_2.jpg', 'good_image_3.jpeg', 'good_i
 images_c = ['calm_image_1.jpg', 'calm_image_2.jpg', 'calm_image_3.jpg', 'calm_image_4.jpg', 'calm_image_5.jpg']
 
 # -15 to -40 elo points
-images_d = ['bad_image_1.jpg', 'bad_image_2.jpg', 'bad_image_3.jpg', 'bad_image_4.jpg', 'bad_image_5.jpg']
+images_d = ['bad_image_1.jpg', 'bad_image_2.jpg', 'bad_image_3.jpg', 'bad_image_4.jpg', 'bad_image_5.jpeg']
 
 # more than -40 elo points
-images_e = ['crisis_image_1.jpg', 'crisis_image_2.jpg', 'crisis_image_3.jpg', 'crisis_image_4.jpg', 'crisis_image_5.jpg',]
+images_e = ['crisis_image_1.jpg', 'crisis_image_2.jpg', 'crisis_image_3.jpg', 'crisis_image_4.jpg', 'crisis_image_5.jpg']
 
 
 ##############
