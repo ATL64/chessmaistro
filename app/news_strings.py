@@ -41,7 +41,7 @@ titles_a = ['Stellar performance by {username}',
             'Magical {username}',
             '\"The machine\" {username}',
             '{username} goes to the moon',
-            '{username} climbs {pts_diff_day_before} points!']
+            '{username} climbs {diff_rating} points!']
 
 # 15 to 40 elo points
 titles_b = ['Grandmaster {username} keeps going',

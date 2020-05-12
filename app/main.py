@@ -42,6 +42,32 @@ PAGE_SIZE_SQL = 3 # for custom sql data table
 app = flask.Flask(__name__)
 dash_app = dash.Dash(__name__, server = app, url_base_pathname='/') #, external_stylesheets=[external_style]) #dbc.themes.DARKLY
 
+dash_app.index_string = """<!DOCTYPE html>
+<html>
+    <head>
+            <!-- Global site tag (gtag.js) - Google Analytics -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=UA-165584893-1"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+            
+              gtag('config', 'UA-165584893-1');
+            </script>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
 
 # Images/logos
 image_filename_1 = 'chess-logo-2.png' # replace with your own image
@@ -158,7 +184,7 @@ def build_quick_stats_panel():
 
 # Make list of months to get data from api
 now = dt(dt.now().year, dt.now().month, 1)
-ctr = dt(2020, 3, 1)
+ctr = dt(2019, 1, 1)
 list_months = [ctr.strftime('%Y-%m-%d')]
 
 while ctr < now:
@@ -306,9 +332,10 @@ dash_app.layout = html.Div([
                                     id='month-range',
                                     min_date_allowed=dt(2017, 1, 1).date(),
                                     max_date_allowed=dt.today().date(),
-                                    initial_visible_month= (dt.today().date()),
+                                    initial_visible_month=(dt.today().date()),
                                     start_date=st_date,
                                     end_date=dt.today().date(),
+                                    display_format='DD/MM/YYYY',
                                 ), style={'marginLeft': 100}
                             ),
                         ]),
@@ -318,7 +345,7 @@ dash_app.layout = html.Div([
                                   {'label': 'Bullet', 'value': 'bullet'},
                                   {'label': 'Rapid', 'value': 'rapid'}
                               ],
-                              value=['blitz','bullet'],
+                              value=['blitz'],
                               multi=True,
                               style={'width': '300px', 'height': '40px', 'marginLeft': 20,
                                      'backgroundColor': '#222222'}
@@ -334,7 +361,6 @@ dash_app.layout = html.Div([
                         html.Div(
                             id="status-container",
                             children=[build_quick_stats_panel()],
-                            #style={'marginLeft': 300, 'marginRight': 100, 'marginTop': 50},
                             className='col s12 m6'
                             ),
                          html.Div(
@@ -363,9 +389,6 @@ dash_app.layout = html.Div([
             html.Br(),
             html.Br(),
             html.Br(),
-
-            # TABLE
-            # TABLE
             html.Br(),
             html.Br(),
 
@@ -398,9 +421,7 @@ dash_app.layout = html.Div([
                                 
                                 ''')
                                 ]
-                                )
-                        ],style=tab_style,
-                selected_style=tab_selected_style)
+                                )], style=tab_style, selected_style=tab_selected_style)
         ], style=tabs_styles)
     ])
 
@@ -416,7 +437,7 @@ dash_app.layout = html.Div([
 
 @dash_app.callback([Output('hidden-dff', 'children'), Output('loading-output-1', 'children'),
                     Output('hidden-pgn', 'children'), Output('move-forward', 'n_clicks'),
-                    Output('move-back', 'n_clicks')],
+                    Output('move-back', 'n_clicks'), Output('month-range', 'end_date')],
                    [Input('fetch-data-button', 'n_clicks')],
                    [State('username', 'value'), State('timezone-dropdown', 'value')])
 def user_games(n_clicks, username_input, timezone_input):
@@ -556,13 +577,14 @@ def user_games(n_clicks, username_input, timezone_input):
     mod_stringy = re.sub('\\[.*\\]', '', mod_stringy)
     mod_stringy_final = json.loads('{"value": "' + mod_stringy + '"}')
     del df['pgn']
-    return df.to_json(orient='split'), '  ', [mod_stringy_final, user_color_val, win_defeat], 0, 0
+    end_date_datepicker = dt.today().date()
+    return df.to_json(orient='split'), '  ', [mod_stringy_final, user_color_val, win_defeat], 0, 0, end_date_datepicker
 
 @dash_app.callback(Output('intermediate-dff', 'children'), [Input('hidden-dff', 'children')])
 def update_table(original_df):
     print('making intermediate df')
     if original_df is None:
-        raise Exception('the original_df was None, aborting callback chain')
+        raise Exception('the original_df was None, aborting callback chain for intermediate-dff')
     #print(original_df)
     dff = pd.read_json(original_df, orient='split')
     return dff.to_json(orient='split')
@@ -579,6 +601,8 @@ def update_table(original_df):
                                                         ]
                    )
 def update_table(original_df, colors_i, start_date_i, end_date_i, time_class_i, colors, start_date, end_date, time_class):
+    if original_df is None:
+        raise Exception('the original_df was None, aborting callback chain for filtered-dff')
     dff = pd.read_json(original_df, orient='split')
     print('getting all states of filters')
     print(dff.head())
@@ -782,9 +806,9 @@ def make_news(filtered_dff, username_input, realname_input):
         sen_2 = ns.sen_2_0
         max_yesterday = str(max(
             dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating']))
-        #date_last_play = str(max(dff['end_time']).date())
+        date_last_play = str(max(dff['end_time']).date())
         rating_last_play = max_yesterday
-        abs_diff_rating =  ''
+        abs_diff_rating = ''
         matches_played_y = ''
         matches_won_y = ''
         matches_drawn_y = ''
@@ -801,6 +825,7 @@ def make_news(filtered_dff, username_input, realname_input):
         diff_rating = max_yesterday - max_day_before
         abs_diff_rating = str(abs(diff_rating))
         dff_y = dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]
+        date_last_play = str(max(dff['end_time']).date())
         matches_played_y = str(len(dff_y['user_result']))
         matches_won_y = str(len(dff_y[dff_y['user_result'] == 'win'].index))
         matches_drawn_y = str(len(dff_y[dff_y['user_result'].isin(['stalemate', 'repetition', 'insufficient'])].index))
@@ -835,6 +860,7 @@ def make_news(filtered_dff, username_input, realname_input):
         elif diff_rating < -30:
             titles = ns.titles_e
             images = ns.images_e
+            sen_1 = ns.sen_1_e
             sen_2 = ns.sen_2_e
     #print(max_yesterday)
     #print(max_day_before)
@@ -844,7 +870,7 @@ def make_news(filtered_dff, username_input, realname_input):
         html.Br(),
         html.Br(),
         html.Br(),
-        html.H1(rd.choice(titles).format(username=realname_input, pts_diff_day_before=abs_diff_rating),
+        html.H1(rd.choice(titles).format(username=realname_input, diff_rating=abs_diff_rating),
                 style={'justify': 'center', 'align': 'center', 'text-align': 'center'}
                 ),
         html.Br(),
@@ -860,7 +886,8 @@ def make_news(filtered_dff, username_input, realname_input):
         html.H4(rd.choice(sen_2).format(username=realname_input, max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
-                                        abs_diff_rating=abs_diff_rating, rating_last_play = rating_last_play)
+                                        abs_diff_rating=abs_diff_rating, rating_last_play=rating_last_play,
+                                        date_last_play=date_last_play)
         )
         ], style={'font-family': 'Times New Roman', 'marginLeft': 300, 'marginRight': 300})
             ]
@@ -944,7 +971,7 @@ def make_news_last(filtered_dff, username_input, realname_input):
         sen_3 = ns.sen_3_0
         max_yesterday = str(max(
             dff[dff['end_time'].apply(lambda x: x.date()) == max(dff['end_time']).date()]['user_rating']))
-        #date_last_play = str(max(dff['end_time']).date())
+        date_last_play = str(max(dff['end_time']).date())
         rating_last_play = max_yesterday
         matches_played_y = ''
         matches_won_y = ''
@@ -960,6 +987,7 @@ def make_news_last(filtered_dff, username_input, realname_input):
                 dff[dff['end_time'].apply(lambda x: x.date()) < (dt.today().date() - timedelta(days=1))]['end_time'])
                 .date()]['user_rating']
             )
+        date_last_play = str(max(dff['end_time']).date())
         diff_rating = max_yesterday - max_day_before
         abs_diff_rating = str(abs(diff_rating))
         dff_y = dff[dff['end_time'].apply(lambda x: x.date()) == (dt.today().date() - timedelta(days=1))]
@@ -984,7 +1012,8 @@ def make_news_last(filtered_dff, username_input, realname_input):
         html.H4(rd.choice(sen_3).format(username=realname_input , max_yesterday=max_yesterday,
                                         matches_played_y=matches_played_y, matches_won_y=matches_won_y,
                                         matches_lost_y=matches_lost_y, matches_drawn_y=matches_drawn_y,
-                                        abs_diff_rating=abs_diff_rating, rating_last_play = rating_last_play)
+                                        abs_diff_rating=abs_diff_rating, rating_last_play=rating_last_play,
+                                        date_last_play=date_last_play)
         ),
         html.Br(),
         html.Br()
