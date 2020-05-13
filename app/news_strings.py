@@ -150,8 +150,8 @@ sen_1_e = ['The tsunami has hit hard on {username}\'s coast.  One wave after the
             'herpes and HIV simultaneously after visiting a shady brothel in the outskirts of the city, abusing low '
            'quality drugs, hence his low performance.',
            'What is wrong with {username}?  Is it the drug addictions that have returned after all this time?  Is it '
-           'the media pressure after having been found out having an affair with Angeline Jolie? Or perhaps the '
-           'the photographs found of him kissing a homeless man dressed up as a female alien?',
+           'the media pressure after having been found out having an affair? Or perhaps '
+           'the photographs found of him kissing a homeless man drinking cheap wine?',
            'The blunder man, the bad opening guy, the \"oh, I had bad connection\" excuse.  This all found place in a '
            'single individual yesterday: {username}.  The level of chess displayed was distasteful, and we all want '
            'our money back sir.  And disinfect the money you give us please, in case it\'s contagious.',
@@ -247,7 +247,7 @@ sen_3_d = ['\" The boat is sinking, will {username} be able to recover? Let\'s s
            ]
 
 # more than -40 elo points
-sen_3_e = ['\" I will definitely have nightmares tonight.  I am absolutely horrified by the terrible chess. \" said'
+sen_3_e = ['\" I will definitely have nightmares tonight.  I am absolutely horrified by the terrible chess. \" said '
            'Garry Kasparov to CNN yesterday'
            ]
 
