@@ -1,5 +1,7 @@
 # Chessmaistro - Docker 
 
+Available here: http://34.89.156.29
+
 This app is built with Dash, a Python framework to build elegant interactive dashboards for the web. 
 We also use a template to create a Docker image that uses Flask, Nginx, and uWSGI to serve the application.
 
