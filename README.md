@@ -2,6 +2,8 @@
 
 Not online currently.
 
+![Alt text](/chessmaistro_1.png?raw=true "Input your user data")
+
 This app is built with Dash, a Python framework to build elegant interactive dashboards for the web. 
 We also use a template to create a Docker image that uses Flask, Nginx, and uWSGI to serve the application.
 
@@ -15,7 +17,9 @@ This promotes the users to keep playing once they broke their record or got a hi
 you performed yesterday on chess.com, you will have a
 news article about you.
 It is meant to be written in a sensationalistic way, either idolizing or demonizing you
-according to your performance.
+according to your performance.  Next iteration should be done with a model that can generate text like GPT series.
+
+![Alt text](/chessmaistro_2.png?raw=true "Some news summary")
 
 ## Dockerize your Dash app
 
